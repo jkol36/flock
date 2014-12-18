@@ -3,7 +3,6 @@ from django.contrib.auth.models import AbstractUser
 
 
 class Profile(AbstractUser):
-	pass
 
 	def get_latest_notifications(self):
 		return self.notifications.all()[:5]
