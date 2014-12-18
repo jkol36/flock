@@ -4,7 +4,7 @@ from .forms import JobCreationForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import Job
-from flockwithme.app.scheduler.models import TwitterList
+from flockwithme.app.scheduler.models import TwitterList, Influencer, Hashtag
 from flockwithme.core.profiles.models import SocialProfile
 from django.utils import timezone
 from datetime import timedelta
@@ -55,13 +55,34 @@ def auto_favorite(request):
 @login_required
 def auto_follow(request):
 	if request.POST:
-		list_id = request.POST['list_id']
-		profile_id = request.POST['socialProfile']
-		get_profile = SocialProfile.objects.get(pk=profile_id)
-		get_twitter_list = TwitterList.objects.get(pk=list_id)
-		new_follow_members_of_list_job = Job.objects.create(action="FOLLOW_MEMBERS_OF_LIST", socialprofile=get_profile, twitter_list=get_twitter_list)
-		new_follow_members_of_list_job.save()
-		messages.success(request, "It's a go!")
+		if request.POST['action'] == 'FOLLOW_MEMBERS_OF_LIST':
+			list_id = request.POST['list_id']
+			profile_id = request.POST['socialProfile']
+			get_profile = SocialProfile.objects.get(pk=profile_id)
+			get_twitter_list = TwitterList.objects.get(pk=list_id)
+			new_follow_members_of_list_job = Job.objects.create(action="FOLLOW_MEMBERS_OF_LIST", socialprofile=get_profile, twitter_list=get_twitter_list)
+			new_follow_members_of_list_job.save()
+			messages.success(request, "It's a go!")
+		
+		elif request.POST['action'] == 'FOLLOW_HASHTAG':
+			hashtag_id = request.POST['hashtag']
+			profile_id = request.POST['socialProfile']
+			get_hashtag = Hashtag.objects.get(pk=hashtag_id)
+			get_profile = SocialProfile.objects.get(pk=profile_id)
+			new_job, created = Job.objects.get_or_create(action="FOLLOW_HASHTAG", socialprofile=get_profile)
+			new_job.save()
+			messages.success(request, "It's a go!")
+
+		elif request.POST['action'] == "FOLLOW_INFLUENCER":
+			influencer_id = request.POST['influencer']
+			socialProfile_id = request.POST['socialProfile']
+			get_influencer = Influencer.objects.get(pk=influencer_id)
+			get_profile = SocialProfile.objects.get(pk=socialProfile_id)
+			new_job, created = Job.objects.get_or_create(action="FOLLOW_INFLUENCER", socialprofile=get_profile, influencer=get_influencer)
+			new_job.save()
+			messages.success(request, "It's a go!")
+	
+
 	try:
 		accounts = request.user.accounts.all()
 		pk = accounts[0].id

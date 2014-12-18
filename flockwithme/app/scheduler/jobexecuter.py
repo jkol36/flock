@@ -300,7 +300,7 @@ class JobExecuter(Thread):
 	def follow_list_members(self, job):
 		twitter_list_id = job.twitter_list.id
 		subscribers = [x for x in TwitterList.objects.get(pk=twitter_list_id).get_list_subscribers()]
-		print subscribers
+		
 
 
 	def run(self):

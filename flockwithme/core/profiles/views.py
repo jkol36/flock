@@ -70,7 +70,7 @@ def my_locations(request):
 			print form.errors
 
 		
-	accounts = request.user.account.all()
+	accounts = request.user.accounts.all()
 	pk = accounts[0].id
 	return render(request, 'my_locations.jade', {
 		'locations': ','.join([x.name for x in request.user.locations.all()]),
