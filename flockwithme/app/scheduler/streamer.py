@@ -6,6 +6,7 @@ import sys
 from optparse import OptionParser
 import tweepy
 import time
+from flockwithme.app.scheduler.models import Hashtag, TwitterUser, TwitterStatus
 
 class Streamer(tweepy.StreamListener):
 
@@ -13,6 +14,7 @@ class Streamer(tweepy.StreamListener):
 		self.hashtags = kwargs.pop('hashtags')
 		self.checker = time.time()
 		return super(Streamer, self).__init__(*args, **kwargs)
+		self.daemon = True
 
 	def on_status(self, status):
 		self.process_status(status)

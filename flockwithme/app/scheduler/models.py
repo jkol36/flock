@@ -164,6 +164,7 @@ class Job(models.Model):
 		("GET_LISTS", 'get_lists'),
 		("GET_LIST_SUBSCRIBERS", 'get_list_subscribers'),
 		("GET_ACCOUNT_INFO", "get_account_info"),
+		("LOOKUP_ID",'look up twitter ID and get account info'),
 		)
 	socialprofile = models.ForeignKey(SocialProfile, related_name='jobs')
 	action = models.CharField(max_length=20, choices=ACTION_CHOICES, blank=True, null=True)
@@ -176,6 +177,7 @@ class Job(models.Model):
 	owner = models.CharField(max_length=250, null = True, blank = True)
 	twitter_list = models.ForeignKey(TwitterList, related_name = 'twitter_lists', blank=True, null = True)
 	is_complete = models.BooleanField(default=False)
+	twitter_user = models.ForeignKey('TwitterUser', related_name='twitter_users_in_query', blank=True, null=True)
 	def __unicode__(self):
 		return unicode("%s for %s" % (self.action, self.socialprofile))
 

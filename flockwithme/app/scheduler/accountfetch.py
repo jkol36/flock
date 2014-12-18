@@ -61,7 +61,7 @@ class AccountFetch(Thread):
 				try:
 					if twitter_id not in current_database_ids:
 						profile = api.get_user(user_id=twitter_id)
-						new_twitter_user = TwitterUser.objects.create(screen_name=profile.screen_name, twitter_id=twitter_id, location=profile.location, followers_count=profile.followers_count, friends_count=profile.friends_count)
+						new_twitter_user = TwitterUser.objects.create(screen_name=profile.screen_name, twitter_id=twitter_id, location=profile.location, followers_count=profile.followers_count, friends_count=profile.friends_count, favorites_count = profile.favourites_count)
 						new_twitter_user.save()
 						get_twitter_user = TwitterUser.objects.get(twitter_id=twitter_id)
 						flock_profile.add_follower(get_twitter_user)
@@ -231,7 +231,20 @@ class AccountFetch(Thread):
 			print "exception with get_api function"
 			print e
 	
-	
+	def lookup_id(self, job):
+		twitter_user_id = job.twitter_user.id
+		api = self.get_api()
+		lookup_twitter_user = api.get_user(user_id=twitter_user_id)
+		follower_count = lookup_twitter_user.followers_count
+		screen_name = lookup_twitter_user.screen_name
+		location = lookup_twitter_user.location
+		favorites_count = lookup_twitter_user.favourites_count
+		object_ = TwitterUser.objects.get(pk=twitter_user_id)
+		object_.favorites_count = favorites_count
+		object_.location = location
+		object_.screen_name = screen_name
+		object_.follower_count = follower_count
+		object_.save()
 
 
 
@@ -242,6 +255,8 @@ class AccountFetch(Thread):
 			   job.action = self.get_account_info(job)
 			elif job.action == "GET_LISTS":
 				job.action = self.get_lists()
+			elif job.action == "LOOKUP_ID":
+				job.action = self.lookup_id(job)
 
 
 

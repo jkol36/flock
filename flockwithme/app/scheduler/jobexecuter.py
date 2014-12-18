@@ -44,10 +44,16 @@ class JobExecuter(Thread):
 	def auto_follow(self, job):
 		statuses = job.hashtag.statuses.all().exclude(twitter_user__twitter_id__in=[x.twitterUser.twitter_id for x in self.account.get_friends()])[0:(job.number*10)]
 		users = list(set([status.twitter_user for status in statuses][0:job.number]))
+		socialprofile_id = job.socialprofile.profile_id
+		get_social_profile = SocialProfile.objects.get(pk=socialprofile_id)
 		for user in users:
 			try:
 				self.api.create_friendship(user.twitter_id, follow=False)
-				self.account.add_friend(user)
+				self.account.add_friend(user.twitter_id)
+				twitter_user, created = TwitterUser.objects.get_or_create(twitter_id=user.twitter_id)
+				twitter_user.save()
+				get_twitter_user = TwitterUser.objects.get(pk=user.twitter_id)
+				new_job = Job.objects.get_or_create(action="LOOKUP_ID", twitter_user =get_twitter_user, socialprofile=get_social_profile )
 				self.sleep_action()
 			except tweepy.TweepError as e:
 				if self.handle_error(e):
@@ -228,14 +234,18 @@ class JobExecuter(Thread):
 		screen_names = []
 		screen_names_in_jobs = job.influencer.screen_name
 		screen_names.append(screen_names_in_jobs)
+		socialprofile_id = job.socialprofile.profile_id
+		get_social_profile = SocialProfile.objects.get(pk=socialprofile_id)
 		for screen_name in screen_names:
 			twitter_id= self.get_api().get_user(screen_name =screen_name).id
 			followers = self.get_api().followers_ids(id =twitter_id)
 			try:
 				for follower in followers:
 					twitterUser, _ = TwitterUser.objects.get_or_create(twitter_id=follower)
+					get_twitter_user = TwitterUser.objects.get(pk=follower)
 					self.get_api().create_friendship(follower)
-					self.account.add_friend(twitterUser)
+					self.account.add_friend(get_twitter_user)
+					lookup_id, created = Job.objects.get_or_create(action="LOOKUP_ID", socialprofile=get_social_profile, twitter_user=get_twitter_user)
 					self.sleep_action()
 			except Exception, e:
 				print e 
@@ -300,6 +310,7 @@ class JobExecuter(Thread):
 	def follow_list_members(self, job):
 		twitter_list_id = job.twitter_list.id
 		subscribers = [x for x in TwitterList.objects.get(pk=twitter_list_id).get_list_subscribers()]
+		print subscribers
 		
 
 

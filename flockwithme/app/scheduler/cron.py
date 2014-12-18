@@ -7,6 +7,7 @@ from Queue import Queue
 from threading import Lock
 from django.db.models import Q
 import time
+from flockwithme.app.scheduler.models import Hashtag
 
 
 @kronos.register('0 3 * * *')
@@ -15,7 +16,7 @@ def do_work():
 	threads = []
 	passive_jobs = []
 	for acc in SocialProfile.objects.filter(jobs__isnull=False).distinct():
-		jobs = acc.jobs.all().exclude(Q(action="TRACK_FOLLOWERS") | Q(action="AUTO_DM") | Q(action="GET_ACCOUNT_INFO"))
+		jobs = acc.jobs.all().exclude(Q(action="TRACK_FOLLOWERS") | Q(action="AUTO_DM") | Q(action="GET_ACCOUNT_INFO") | Q(action="LOOKUP_ID"))
 		threads.append(JobExecuter(account=acc, queue=queue, jobs=jobs))
 
 	for thread in threads:
@@ -68,7 +69,7 @@ def fetch_account_info():
 	lock = Lock()
 
 	for acc in SocialProfile.objects.filter(jobs__isnull=False).distinct():
-		jobs = acc.jobs.filter(Q(action="GET_ACCOUNT_INFO"))
+		jobs = acc.jobs.filter(Q(action="GET_ACCOUNT_INFO") | Q(action="LOOKUP_ID"))
 		if jobs:
 			threads.append(AccountFetch(account=acc, queue=queue, jobs=jobs))
 				
@@ -90,7 +91,5 @@ def fetch_account_info():
 			executer.account.save()
 		else:
 			threads[:] = [t for t in threads if t.isAlive()]
-@kronos.register('0 7 * * *')
-def start_streamer():
-	streamer = Streamer()
+
 
