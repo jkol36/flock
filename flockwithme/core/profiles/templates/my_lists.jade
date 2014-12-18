@@ -1,0 +1,100 @@
+extends base
+- load staticfiles
+
+- block title
+| My Lists
+- endblock
+
+- block include
+link(rel='stylesheet', href="{% static 'select2/select2.css' %}")
+script(type='text/javascript', src="{% static 'select2/select2.js' %}")
+script.
+	$(function() {
+		$('#list-owner-input').select2({
+			tags: ['{{list_owner}}'],
+			placeholder: "Enter a Twitter handle and we'll fetch his lists.",
+			width:'300',
+			tokenSeparators: [",", " "],
+			});
+		});
+script.
+	$(function() {
+		$("#list-follower-input").select2({
+			tags: ['{{list_followers}}'],
+			width:'300',
+			});
+		});
+script.
+	$(document).ready(function() {
+		list_owner = $("#listowner")
+		list_owner.click(function() {
+			console.log("click")
+			})
+		});
+- endblock
+
+- block content
+.container
+	.row
+		.col-md-4
+			.panel.panel-default.content.text-center
+				.panel-body(style = "min-height: 300px;")
+					p.text-muted.content-header.lead
+						i.fa.fa-list
+						| My List Owners
+					hr.divider
+					p.text-muted Seperate list owners with a comma
+					form#list-owner-form(method='POST', action="{% url 'my_lists' %}")
+						-csrf_token
+						.form-group
+							input#list-owner-input(type="hidden", name='TwitterListOwner', value="{{list_owner}}")
+						.form-group
+							button.btn.btn-info.btn-lg.form-submit#listowner(type="submit")
+								i.fa.fa-lists
+								| Save List Owners
+		.col-md-7 
+			.panel.panel-default.content.text-center
+				.panel-body
+					p.text-muted.content-header.lead
+						i.fa.fa-list
+							| Fetched Lists
+				
+						hr.divider
+						p.text-muted You can now follow the subscribers of Twitter Lists in 
+							a(href="{% url 'auto_follow' %} ") Auto Follow
+					table.table.table-bordered
+						thead
+							th List Owner
+							th List Name
+							th Profiles Fetched
+							th Subscribers
+						{% for list in twitter_lists %}
+						tbody
+							td {{list.owner}}
+							td {{list.name}}
+							td {{list.get_subscriber_count}}
+							td {{list.get_list_subscribers}}
+						{%endfor%}
+
+					
+	.row 
+		.col-md-4
+			.panel.panel-default.content.text-center
+				.panel-body(style = "min-height: 300px;")
+					p.text-muted.content-header.lead
+						i.fa.fa-list
+						| List owners you follow
+					hr.divider
+					p.text-muted If you submit a list owners who's already in our database, they'll appear here.
+					form#list-owner-form(method='POST', action="{% url 'my_lists' %}")
+						-csrf_token
+						.form-group
+							input#list-follower-input(type="hidden", name='TwitterFollower', disabled, value="{{list_followers}}")
+						.form-group
+							button.btn.btn-info.btn-lg.form-submit#listowner(type="submit")
+								i.fa.fa-lists
+								| Update 
+
+
+
+- endblock
