@@ -4,8 +4,9 @@ from threading import Thread
 from django.conf import settings
 from .models import *
 from flockwithme.core.profiles.models import SocialProfile
+from django.db.models import Q
 from time import sleep
-from flockwithme.app.scheduler.models import TwitterList, TwitterUser, OauthSet, TwitterRelationship
+from flockwithme.app.scheduler.models import TwitterList, TwitterUser, OauthSet, TwitterRelationship, list_owner
 import random
 from tweepy.error import TweepError
 import logging
@@ -163,14 +164,12 @@ class JobExecuter(Thread):
 		profile = self.get_profile_instance(profile_id)
 		api = self.get_api()
 		for owner in list_owners:
-			user = self.get_twitter_user_instance(owner)
-			all_lists = api.lists_all(owner)
+			list_owner_object = list_owner.objects.get(screen_name=owner)
+			all_lists = api.lists_all(screen_name=owner)
 			for l in all_lists:
 				try:
 					if l:
-						user.has_list = True
-						user.save()
-						twitter_list, _ = TwitterList.objects.get_or_create(name=l.name, twitter_id = l.id, profile=profile, owner=user)
+						twitter_list, _ = TwitterList.objects.get_or_create(name=l.name, twitter_id = l.id, profile=profile, owner=list_owner_object)
 						twitter_list.save()
 						if _:
 							twitter_list = TwitterList.objects.get(twitter_id=l.id)
@@ -181,7 +180,8 @@ class JobExecuter(Thread):
 							self.sleep_action()
 				except Exception, e:
 					print "exception in get_lists function in job executor"
-				
+					print e
+			
 		this = Job.objects.get(pk=job_id)
 		this.is_complete = True
 		this.save()
@@ -224,26 +224,25 @@ class JobExecuter(Thread):
 		this_job.save()
 
 			
-
-
-
 	def follow_influencer(self, job):
 		screen_names = []
 		screen_names_in_jobs = job.influencer.screen_name
 		screen_names.append(screen_names_in_jobs)
 		for screen_name in screen_names:
-			twitter_id= self.api.get_user(screen_name = screen_name).id
-			followers = self.api.followers_ids(id = twitter_id)
-			num_followed = 0
+			twitter_id= self.get_api().get_user(screen_name =screen_name).id
+			followers = self.get_api().followers_ids(id =twitter_id)
 			try:
 				for follower in followers:
 					twitterUser, _ = TwitterUser.objects.get_or_create(twitter_id=follower)
-					self.api.create_friendship(follower)
+					self.get_api().create_friendship(follower)
 					self.account.add_friend(twitterUser)
-					num_followed +=1 
 					self.sleep_action()
 			except Exception, e:
 				print e 
+		job_id = job.id
+		this_job = Job.objects.get(pk=job_id)
+		this_job.is_complete= True
+		this_job.save()
 		self.account.save()
 
 	def get_api(self):
@@ -311,28 +310,32 @@ class JobExecuter(Thread):
 		for fav in favs:
 			fav.number = int(DAILY_FAV_LIMIT/favs.count())
 			fav.save()
-		DAILY_FOL_LIMIT = 100.0
-		fols = self.jobs.filter(action="FOLLOW_HASHTAG")
+		DAILY_FOL_LIMIT = 300.0
+		fols = self.jobs.filter(Q(action="FOLLOW_HASHTAG")| Q(action="FOLLOW_INFLUENCER") | Q(action="FOLLOW_MEMBERS_OF_A_LIST"))
 		for fol in fols:
 			fol.number = int(DAILY_FOL_LIMIT/fols.count())
 			fol.save()
 		## END NUMBERSETTING
 		for job in self.jobs:
 			if job.action == 'FOLLOW_HASHTAG':
-				job.action = self.auto_follow
-				job.action(job)
+				if job.is_complete == False:
+					job.action = self.auto_follow
+					job.action(job)
 			elif job.action == 'FAVORITE':
-				job.action = self.auto_favorite
-				job.action(job)
+				if job.is_complete==False:
+					job.action = self.auto_favorite
+					job.action(job)
 			elif job.action == 'FOLLOW_INFLUENCER':
-				job.action = self.follow_influencer
-				job.action(job)
+				if job.is_complete == False:
+					job.action = self.follow_influencer
+					job.action(job)
 			elif job.action == 'TRACK_FOLLOWERS':
 				job.action = self.track_followers
 				job.action(job)
 			elif job.action == 'UNFOLLOW_BACK':
-				job.action = self.unfollow_back
-				job.action(job)
+				if job.is_complete == False:
+					job.action = self.unfollow_back
+					job.action(job)
 			elif job.action =="UNFOLLOW_ALL":
 				job.action = self.unfollow_all
 				job.action(job)

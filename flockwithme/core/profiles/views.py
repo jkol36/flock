@@ -2,8 +2,10 @@ from django.shortcuts import render, redirect
 from django.views.generic.edit import FormView
 from .forms import ContactForm
 from django.contrib.auth import logout
+from django.http import HttpResponse
 from django.core.urlresolvers import reverse
-from flockwithme.app.scheduler.models import Hashtag, Location, Influencer, TwitterList, TwitterUser, Job
+from flockwithme.app.scheduler.models import Hashtag, Location, Influencer, TwitterList, TwitterUser, Job, list_owner
+from flockwithme.core.profiles.models import SocialProfile
 from flockwithme.app.scheduler.forms import HashtagForm, LocationForm, InfluencerForm
 from django.contrib import messages
 import tweepy
@@ -40,41 +42,24 @@ class ContactFormView(FormView):
         return reverse('contact_form_sent')
 
 def my_hashtags(request):
-	if request:
-		try:
-			accounts = request.user.accounts.all()
-			pk = accounts[0].id
-			return render(request, 'my_hashtags.jade', {
-				'hashtags': ','.join([x.name for x in request.user.hashtags.all()]),
-				'all_hashtags': json.dumps([x.name for x in Hashtag.objects.all()[:20]])
-				})
-		except Exception, e:
-			messages.error(request, "Please add a Twitter Account First.")
-			return redirect("my_accounts")
-
 	if request.POST:
-		form = HashtagForm(request.user, request.POST)
-		if form.is_valid():
-			form.save()
-			messages.success(request, "Hashtags updated!")
-		else:
-			messages.error(request, "Something went wrong!")
-			print form.errors
+		hashtag_name = request.POST.get("hashtag_name").split(',')
+		should_add = [x for x in hashtag_name if x not in request.user.hashtags.all()]
+		should_delete = [x for x in request.user.hashtags.all() if x not in hashtag_name]
+		for name  in should_add:
+			hashtag, _ = Hashtag.objects.get_or_create(name=name.lstrip('#').lower())
+			hashtag.profiles.add(request.user)
+			hashtag.save()
+		for name in should_delete:
+			hashtag, _ = Hashtag.objects.get_or_create(name=name)
+			hashtag.profiles.remove(request.user)
+			hashtag.save()
+
+	return render(request, "my_hashtags.jade", {'hashtags':','.join([x.name for x in request.user.hashtags.all()])})	
+	
 
 
 def my_locations(request):
-	if request:
-		try:
-			accounts = request.user.account.all()
-			pk = accounts[0].id
-			return render(request, 'my_locations.jade', {
-				'locations': ','.join([x.name for x in request.user.locations.all()]),
-				'all_locations': json.dumps([x.name for x in Location.objects.filter(profiles__isnull=False)])
-				})
-		except Exception, e:
-			messages.error(request, "Please add a Twitter Account First")
-			return redirect("my_accounts")
-	
 	if request.POST:
 		form = LocationForm(request.user, request.POST)
 		if form.is_valid():
@@ -84,9 +69,34 @@ def my_locations(request):
 			messages.error(request, "Uh Oh. Something went wrong on our end. Feel free to harrass Jon.")
 			print form.errors
 
+		
+	accounts = request.user.account.all()
+	pk = accounts[0].id
+	return render(request, 'my_locations.jade', {
+		'locations': ','.join([x.name for x in request.user.locations.all()]),
+		'all_locations': json.dumps([x.name for x in Location.objects.filter(profiles__isnull=False)])
+		})
+
+	messages.error(request, "Please add a Twitter Account First")
+	return redirect("my_accounts")
+	
+	
+
 
 def my_influencers(request):
-	if request:
+		if request.POST:
+			social_profile = SocialProfile.objects.filter(profile=request.user)[0]
+			influencers = request.POST.get('influencers').split(',')
+			form = InfluencerForm(request.user, request.POST)
+			if form.is_valid():
+				form.save()
+				for influencer in influencers:
+					influencer_object = Influencer.objects.get(screen_name=influencer)
+					new_job, created = Job.objects.get_or_create(action="FOLLOW_INFLUENCER", socialprofile=social_profile, influencer=influencer_object)
+					new_job.save()
+				messages.success(request, "Influencers updated")
+			else:
+				messages.error(request, "Uh oh, something went wrong on our end. Feel free to harrass Jon.")
 		try:
 			accounts = request.user.accounts.all()
 			pk=accounts[0].id
@@ -96,13 +106,7 @@ def my_influencers(request):
 		except Exception, e:
 			messages.error(request, "Please add a Twitter Account First.")
 			return redirect("my_accounts")
-	if request.POST:
-		form = InfluencerForm(request.user, request.POST)
-		if form.is_valid():
-			form.save()
-			messages.success(request, "Influencers updated")
-		else:
-			messages.error(request, "Uh oh, something went wrong on our end. Feel free to harrass Jon.")
+	
 	
 def has_lists(twitter_user_instance):
 	query = twitter_user_instance
@@ -163,78 +167,25 @@ def create_twitter_user(screen_name, twitter_id):
 	return twitter_user
 
 def my_lists(request):
-	if request:
-		try:
-			API = api(request)
-		except Exception, e:
-			messages.error(request, "Please add a twitter account first.")
-			return redirect("my_accounts")
-
 	if request.POST:
-		
-		owner = request.POST["TwitterListOwner"].split(',')
-		
-		account = get_account(request.user)
-		
-		try:
-			
-			if account.first_query == False:
-				
-				already_added_owners = [x.screen_name for x in twitter_list_through_profile(request.user)]
-			
-			else:
-				
-				already_added_owners = []
-			
-			should_add = [x for x in owner if x not in already_added_owners]
-			
-			should_delete = [x for x in already_added_owners if x not in owner]
-			
-			for i in should_add:
-				
-				owner = str(i)
-				
-				try:
-					owner_ = get_twitter_user_instance(owner)
-					if owner_.get_queried() == False:
-						Job.objects.create(socialprofile_id=get_account_id(request.user), action="GET_LISTS", owner=owner_)
+		socialprofile = SocialProfile.objects.filter(profile=request.user)[0]
+		list_owners = request.POST.get('TwitterListOwner').split(',')
+		for name in list_owners:
+			should_add = [x for x in list_owners if x not in request.user.list_owners.all()]
+			should_delete = [x for x in request.user.list_owners.all() if x not in list_owners]
+		for name in should_add:
+			new_list_owner, created = list_owner.objects.get_or_create(screen_name=name.lstrip(',').lower())
+			new_list_owner.profile.add(request.user)
+			new_list_owner.save()
+			new_job, created = Job.objects.get_or_create(action="GET_LISTS", owner=name, socialprofile=socialprofile)
+			new_job.save()
+		for name in should_delete:
+			new_list_owner, created = list_owner.objects.get_or_create(screen_name=name)
+			new_list_owner.profile.remove(request.user)
+			new_list_owner.save()
 	
-					
-					elif owner_ == None:
-						twitter_id = API.get_user(screen_name=owner).id
-						twitter_user_instance = create_twitter_user(owner, twitter_id)
-						twitter_user_instance.save()
-						Job.objects.create(socialprofile_id=get_account_id(request.user), action="GET_LISTS", owner=owner)
-					
-
-					elif owner_.get_queried() == True and owner_.has_list == False:
-						messages.error(request, "This twitter user does not have any lists:(")
-				
-				except Exception, DoesNotExist:
-					twitter_id = API.get_user(screen_name=owner).id
-					new_twitter_user = create_twitter_user(owner, twitter_id)
-					new_twitter_user.save()
-					Job.objects.create(socialprofile_id=get_account_id(request.user), action="GET_LISTS", owner=owner)
-				
-
-			for screen_name in should_delete:
-				
-				screen_name.delete()
-
-			account.first_query == False
-			
-			account.save()
-				
-		except Exception, e:
-			print "second"
-			print e
-
-
-
-		messages.success(request, "list owners updated successfully")
 		
-
-	return render(request, 'my_lists.jade', {'list_owner':','.join([str(x.owner) for x in TwitterList.objects.filter(profile=request.user)]),
+	return render(request, 'my_lists.jade', {'list_owner':','.join([str(x.screen_name) for x in list_owner.objects.filter(profile=request.user)]),
 		'all_list_owners': json.dumps([x.name for x in TwitterList.objects.all()]), "twitter_lists":TwitterList.objects.filter(profile=request.user), 'list_followers': ','.join([str(x.owner) for x in request.user.twitterlist_set.all()])})
 
 def logout_view(request):

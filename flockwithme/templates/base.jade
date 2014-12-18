@@ -11,7 +11,6 @@ head
 	script(type='text/javascript', src='http://code.jquery.com/jquery-1.11.0.min.js')
 	script(type='text/javascript', src='//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js')
 	script(src="{% static 'django_ajax/js/jquery.ajax.min.js' %}", type="text/javascript")
-	- comment
 	script.
 		$(document).ready(function() {
 			$('.dropdown-trigger').click(function(e) {
@@ -36,7 +35,6 @@ head
 				}
 			});
 		});
-	- endcomment
 	- block include
 	- endblock
 
@@ -122,18 +120,18 @@ body
 					.row.row-top
 						.col-lg-6.col-md-6.col-sm-6.col-xs-12
 							h1
-								//a#toggle-button(style='color: lightgrey; padding-right: 20px')
+								a#toggle-button(style='color: lightgrey; padding-right: 20px')
 									i.fa.fa-bars.fa-fw
 								- block title
 								- endblock
 						.col-lg-6.col-md-6.col-sm-6.col-xs-12
 							.container-fluid.pull-right
 								h1
-									a.icon-top.dropdown-trigger.dropdown-toggle#notification-dropdown(href='#', onclick="return false;")
+									a.icon-top.dropdown-trigger.dropdown-toggle#notification-dropdown(href='#', onclick="return false")
 										i.fa.fa-bell-o.fa-fw
 										span.badge#notification-badge
 											| 0
-									- comment
+									
 									ul.dropdown-menu.dropdown-show.pull-right
 										- var notifications = user.get_latest_notifications
 										if notifications
@@ -149,7 +147,7 @@ body
 													hr.divider
 										else
 											p No new notifications
-									- endcomment
+								
 				br
 				if user.is_authenticated
 					if not user.accounts.all or not user.hashtags.all or not user.locations.all
