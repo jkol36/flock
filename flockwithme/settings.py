@@ -46,7 +46,7 @@ INSTALLED_APPS = (
     'flockwithme.app',
     'flockwithme.app.scheduler',
     'flockwithme.app.subscribe',
-    # 'flockwithme.app.notification',
+    'flockwithme.app.notification',
     
     'django_ajax',
     'kronos',
