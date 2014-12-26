@@ -5,6 +5,7 @@ from django.db.models.signals import post_save
 from datetime import datetime
 import time
 
+
 class TwitterStatus(models.Model):
 	twitter_id = models.BigIntegerField()
 	created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)

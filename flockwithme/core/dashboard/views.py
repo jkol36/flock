@@ -6,7 +6,7 @@ from django.conf import settings
 
 @login_required
 def index(request):
-	new_followers, days, potential_customers = 0, 0, 0
+	new_followers, days, potential_customers, follower_count, unfollow_count = 0, 0, 0, 0, 0
 	now = timezone.now()
 	for acc in request.user.accounts.all():
 		follower_count = get_follower_count(request)
@@ -41,7 +41,12 @@ def get_follower_count(self):
 	return follower_count
 
 def get_unfollow_count(self):
-	profiles = self.user.accounts.all()
-	unfriended = [len(x.get_unfriended()) for x in profiles]
-	total = unfriended[0] + unfriended[1]
-	return total
+	try:
+		profiles = self.user.accounts.all()
+		num_of_accounts = len(profiles)
+		unfriended = [len(x.get_unfriended()) for x in profiles)
+		total = unfriended
+		print total
+	except Exception, e:
+		print e
+		

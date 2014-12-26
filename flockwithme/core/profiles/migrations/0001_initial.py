@@ -50,7 +50,9 @@ class Migration(migrations.Migration):
                 ('first_query', models.BooleanField(default=True)),
                 ('last_follower', models.IntegerField(default=None, null=True)),
                 ('last_friend', models.IntegerField(default=None, null=True)),
-                ('profile', models.ForeignKey(related_name=b'accounts', to=settings.AUTH_USER_MODEL)),
+                ('twitter_follower_count', models.IntegerField(default=None, null=True)),
+                ('database_follower_count', models.IntegerField(default=None, null=True)),
+                ('profile', models.ForeignKey(related_name='accounts', to=settings.AUTH_USER_MODEL)),
             ],
             options={
             },

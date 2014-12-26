@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
- 
 import os
 import sys
 from optparse import OptionParser
 import tweepy
 import time
 from flockwithme.app.scheduler.models import Hashtag, TwitterUser, TwitterStatus
+
+
 
 class Streamer(tweepy.StreamListener):
 
@@ -113,5 +114,5 @@ if __name__ == '__main__':
 	####################### IMPORTS ########################
 	from flockwithme.app.scheduler.models import Hashtag, TwitterUser, TwitterStatus
 	########################################################
-	a = Worker()
-	a.stream()
+a = Worker()
+a.stream()
